@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>關西旅遊靈感轉盤 & 隨身記帳小助手</title>
+  <!-- Google Fonts & Tailwind CSS CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+
+  <div class="max-w-6xl mx-auto space-y-8">
+    
+    <!-- 頂部標題列 -->
+    <header class="text-center space-y-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold tracking-wide uppercase">
+        <i class="fa-solid fa-torii-gate"></i> Kansai Trip Planner
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">關西隨行：靈感轉盤 × 記帳匯率</h1>
+      <p class="text-slate-600 text-sm sm:text-base">不知道下一站去哪？讓幸運轉盤幫你挑，還能即時計算日幣開銷！</p>
+    </header>
+
+    <!-- 主功能網格：左側轉盤 / 右側匯率與記帳 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- ================= 左側：隨機地點轉盤 ================= -->
+      <section class="lg:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-6">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <h2 class="text-xl font-bold flex items-center gap-2 text-slate-800">
+            <i class="fa-solid fa-compass text-red-500"></i> 去哪裡靈感轉盤
+          </h2>
+          <span id="spotCountBadge" class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium">8 個景點</span>
+        </div>
+
+        <!-- 分區過濾按鈕 -->
+        <div class="flex flex-wrap gap-2 text-xs font-medium">
+          <button onclick="filterCategory('all')" class="cat-btn px-3 py-1.5 rounded-lg bg-slate-900 text-white transition" data-cat="all">全部</button>
+          <button onclick="filterCategory('osaka')" class="cat-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-cat="osaka">大阪</button>
+          <button onclick="filterCategory('kyoto')" class="cat-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-cat="kyoto">京都</button>
+          <button onclick="filterCategory('kobe')" class="cat-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-cat="kobe">神戶</button>
+          <button onclick="filterCategory('suburb')" class="cat-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-cat="suburb">近郊/秘境</button>
+        </div>
+
+        <!-- 轉盤畫布區 -->
+        <div class="relative flex justify-center items-center py-2">
+          <!-- 頂部指針 -->
+          <div class="absolute -top-1 left-1/2 -translate-x-1/2 z-20 w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-t-[24px] border-t-red-600 drop-shadow"></div>
+          
+          <canvas id="wheelCanvas" width="360" height="360" class="max-w-full h-auto cursor-pointer drop-shadow-md rounded-full"></canvas>
+
+          <!-- 圓心抽籤按鈕 -->
+          <button id="spinBtn" onclick="spinWheel()" class="absolute z-10 w-16 h-16 rounded-full bg-white shadow-lg border-4 border-red-500 text-red-600 font-bold flex flex-col items-center justify-center text-xs hover:scale-105 active:scale-95 transition">
+            <span>SPIN</span>
+            <span class="text-[10px] text-slate-400">旋轉</span>
+          </button>
+        </div>
+
+        <!-- 抽籤結果提示 -->
+        <div id="resultBox" class="hidden bg-red-50 border border-red-200 p-4 rounded-xl text-center space-y-2 transition-all">
+          <div class="text-xs text-red-600 font-semibold tracking-wide">✦ 命運安排的下一站 ✦</div>
+          <div id="resultText" class="text-xl font-bold text-slate-800"></div>
+          <div class="flex justify-center gap-2 pt-1">
+            <a id="gmapLink" href="#" target="_blank" class="inline-flex items-center gap-1.5 text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 font-medium transition">
+              <i class="fa-solid fa-location-dot"></i> Google Maps 搜尋
+            </a>
+          </div>
+        </div>
+
+        <!-- 自訂項目收合選單 -->
+        <details class="text-xs text-slate-500 border border-slate-200 rounded-lg p-3">
+          <summary class="cursor-pointer font-medium text-slate-700 select-none">管理 / 新增轉盤候選地點</summary>
+          <div class="pt-3 space-y-3">
+            <div class="flex gap-2">
+              <input id="customSpotInput" type="text" placeholder="輸入想去的景點名稱..." class="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 text-xs" />
+              <button onclick="addCustomSpot()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition">新增</button>
+            </div>
+            <div id="customTagsContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1"></div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ================= 右側：匯率換算 & 記帳工具 ================= -->
+      <section class="lg:col-span-6 space-y-6">
+
+        <!-- 1. 雙向匯率即時換算 -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h2 class="text-lg font-bold flex items-center gap-2 text-slate-800">
+              <i class="fa-solid fa-arrow-right-arrow-left text-amber-500"></i> 日幣 / 台幣 雙向即時換算
+            </h2>
+            <div class="flex items-center gap-1.5 text-xs text-slate-500">
+              <span>匯率:</span>
+              <input id="rateInput" type="number" step="0.001" value="0.205" oninput="updateRate()" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-center text-slate-800 font-mono font-medium focus:outline-none focus:ring-1 focus:ring-amber-500" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <!-- 日幣輸入 -->
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-500">日幣 (JPY ¥)</label>
+              <div class="relative">
+                <input id="jpyInput" type="number" placeholder="0" oninput="convertFromJPY()" class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-xl font-mono text-base font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 bg-slate-50 focus:bg-white transition" />
+                <span class="absolute left-3 top-2 text-slate-400 font-bold">¥</span>
+              </div>
+            </div>
+            <!-- 台幣輸入 -->
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-500">台幣 (TWD NT$)</label>
+              <div class="relative">
+                <input id="twdInput" type="number" placeholder="0" oninput="convertFromTWD()" class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-xl font-mono text-base font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 bg-slate-50 focus:bg-white transition" />
+                <span class="absolute left-3 top-2 text-slate-400 font-bold">$</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 快速代入按鈕 -->
+          <div class="flex items-center justify-between pt-1">
+            <div class="flex gap-1.5 text-xs">
+              <button onclick="quickSetJPY(1000)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md font-mono text-slate-600 transition">¥1,000</button>
+              <button onclick="quickSetJPY(3000)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md font-mono text-slate-600 transition">¥3,000</button>
+              <button onclick="quickSetJPY(5000)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md font-mono text-slate-600 transition">¥5,000</button>
+              <button onclick="quickSetJPY(10000)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md font-mono text-slate-600 transition">¥10,000</button>
+            </div>
+            <button onclick="fillExpenseFromConvert()" class="text-xs text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1 transition">
+              <i class="fa-solid fa-plus-circle"></i> 帶入記帳
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. 隨行旅費記帳本 -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h2 class="text-lg font-bold flex items-center gap-2 text-slate-800">
+              <i class="fa-solid fa-wallet text-emerald-500"></i> 關西旅費記帳
+            </h2>
+            <button onclick="clearAllExpenses()" class="text-xs text-slate-400 hover:text-red-500 transition">清空紀錄</button>
+          </div>
+
+          <!-- 總額統計卡片 -->
+          <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
+            <div>
+              <div class="text-[11px] text-slate-500 font-medium">總日幣支出</div>
+              <div id="totalJPY" class="text-lg font-extrabold font-mono text-slate-800">¥ 0</div>
+            </div>
+            <div>
+              <div class="text-[11px] text-slate-500 font-medium">折合台幣約</div>
+              <div id="totalTWD" class="text-lg font-extrabold font-mono text-emerald-600">NT$ 0</div>
+            </div>
+          </div>
+
+          <!-- 新增記帳項目表單 -->
+          <form id="expenseForm" onsubmit="addExpense(event)" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <input id="expName" type="text" placeholder="項目 (如: 一蘭拉麵)" required class="sm:col-span-5 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              
+              <select id="expCategory" class="sm:col-span-3 px-2 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white">
+                <option value="餐飲">🍜 餐飲</option>
+                <option value="交通">🚃 交通</option>
+                <option value="購物">🛍️ 購物</option>
+                <option value="門票">🎟️ 門票</option>
+                <option value="其他">🏷️ 其他</option>
+              </select>
+
+              <div class="sm:col-span-4 relative">
+                <input id="expAmount" type="number" placeholder="金額 JPY" required class="w-full pl-6 pr-2 py-2 border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                <span class="absolute left-2.5 top-2 text-slate-400 text-xs font-bold">¥</span>
+              </div>
+            </div>
+            
+            <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition">
+              ＋ 新增此筆花費
+            </button>
+          </form>
+
+          <!-- 記帳明細列表 -->
+          <div class="space-y-2">
+            <div class="text-xs font-semibold text-slate-500 flex justify-between">
+              <span>近期開銷明細</span>
+              <span id="expenseCount" class="font-normal">共 0 筆</span>
+            </div>
+            <div id="expenseList" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <!-- 動態插入支出項目 -->
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- 頁尾說明 -->
+    <footer class="text-center text-xs text-slate-400 pt-6">
+      關西漫遊隨行助手 · 離線皆可使用 · 記帳資料自動儲存於瀏覽器
+    </footer>
+
+  </div>
+
+  <!-- JavaScript 邏輯 -->
+  <script>
+    /* ================= 1. 轉盤模組 ================= */
+    const defaultSpots = {
+      osaka: [
+        { name: "道頓堀美食巡禮", cat: "osaka" },
+        { name: "梅田空中庭園看夜景", cat: "osaka" },
+        { name: "中之島河畔咖啡散步", cat: "osaka" },
+        { name: "通天閣新世界串炸", cat: "osaka" },
+        { name: "黑門市場新鮮海鮮", cat: "osaka" }
+      ],
+      kyoto: [
+        { name: "祇園花見小路漫步", cat: "kyoto" },
+        { name: "清水寺二年坂三年坂", cat: "kyoto" },
+        { name: "宇治平等院抹茶巡禮", cat: "kyoto" },
+        { name: "嵐山竹林與渡月橋", cat: "kyoto" },
+        { name: "伏見稻荷千本鳥居", cat: "kyoto" }
+      ],
+      kobe: [
+        { name: "神戶港吹海風看夜景", cat: "kobe" },
+        { name: "北野異人館異國洋房", cat: "kobe" },
+        { name: "六甲山頂眺望海灣", cat: "kobe" },
+        { name: "三宮元町尋覓神戶牛", cat: "kobe" }
+      ],
+      suburb: [
+        { name: "箕面勝尾寺達摩祈願", cat: "suburb" },
+        { name: "奈良公園餵小鹿與東大寺", cat: "suburb" },
+        { name: "和歌山電鐵貓站長", cat: "suburb" },
+        { name: "近江八幡水鄉散策", cat: "suburb" }
+      ]
+    };
+
+    let activeCategory = 'all';
+    let currentSpots = [];
+    const colors = [
+      "#f87171", "#fb923c", "#fbbf24", "#34d399", 
+      "#60a5fa", "#818cf8", "#a78bfa", "#f472b6"
+    ];
+
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    let startAngle = 0;
+    let isSpinning = false;
+
+    function initSpots() {
+      if (activeCategory === 'all') {
+        currentSpots = [
+          ...defaultSpots.osaka,
+          ...defaultSpots.kyoto,
+          ...defaultSpots.kobe,
+          ...defaultSpots.suburb
+        ];
+      } else {
+        currentSpots = [...defaultSpots[activeCategory]];
+      }
+      renderTags();
+      drawWheel();
+      document.getElementById('spotCountBadge').innerText = `${currentSpots.length} 個景點`;
+    }
+
+    function filterCategory(cat) {
+      if (isSpinning) return;
+      activeCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = "cat-btn px-3 py-1.5 rounded-lg bg-slate-900 text-white transition";
+        } else {
+          btn.className = "cat-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition";
+        }
+      });
+      document.getElementById('resultBox').classList.add('hidden');
+      initSpots();
+    }
+
+    function drawWheel() {
+      const numOptions = currentSpots.length;
+      if (numOptions === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      const arc = 2 * Math.PI / numOptions;
+      const outsideRadius = 170;
+      const textRadius = 110;
+      const insideRadius = 45;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numOptions; i++) {
+        const angle = startAngle + i * arc;
+        ctx.fillStyle = colors[i % colors.length];
+
+        // 扇形
+        ctx.beginPath();
+        ctx.arc(180, 180, outsideRadius, angle, angle + arc, false);
+        ctx.arc(180, 180, insideRadius, angle + arc, angle, true);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 文字
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 13px 'Noto Sans TC', sans-serif";
+        ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.shadowBlur = 3;
+        const textAngle = angle + arc / 2;
+        const tx = 180 + Math.cos(textAngle) * textRadius;
+        const ty = 180 + Math.sin(textAngle) * textRadius;
+        ctx.translate(tx, ty);
+        ctx.rotate(textAngle + Math.PI / 2);
+        
+        let label = currentSpots[i].name;
+        if (label.length > 7) label = label.substring(0, 6) + "…";
+        ctx.fillText(label, -ctx.measureText(label).width / 2, 0);
+        ctx.restore();
+      }
+    }
+
+    function spinWheel() {
+      if (isSpinning || currentSpots.length === 0) return;
+      isSpinning = true;
+      document.getElementById('resultBox').classList.add('hidden');
+
+      const spinAngleStart = Math.random() * 10 + 20;
+      let spinTime = 0;
+      const spinTimeTotal = Math.random() * 1500 + 3000;
+
+      function rotate() {
+        spinTime += 30;
+        if (spinTime >= spinTimeTotal) {
+          stopRotateWheel();
+          return;
+        }
+        // 緩動阻尼公式
+        const spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+        startAngle += (spinAngle * Math.PI / 180);
+        drawWheel();
+        requestAnimationFrame(rotate);
+      }
+      rotate();
+    }
+
+    function easeOut(t, b, c, d) {
+      const ts = (t /= d) * t;
+      const tc = ts * t;
+      return b + c * (tc + -3 * ts + 3 * t);
+    }
+
+    function stopRotateWheel() {
+      isSpinning = false;
+      const degrees = startAngle * 180 / Math.PI + 90;
+      const arcd = 360 / currentSpots.length;
+      const index = Math.floor((360 - (degrees % 360)) / arcd) % currentSpots.length;
+      
+      const chosen = currentSpots[index];
+      const resultBox = document.getElementById('resultBox');
+      const resultText = document.getElementById('resultText');
+      const gmapLink = document.getElementById('gmapLink');
+
+      resultText.innerText = chosen.name;
+      gmapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(chosen.name)}`;
+      resultBox.classList.remove('hidden');
+    }
+
+    function addCustomSpot() {
+      const input = document.getElementById("customSpotInput");
+      const name = input.value.trim();
+      if (!name) return;
+      currentSpots.push({ name: name, cat: "custom" });
+      input.value = "";
+      renderTags();
+      drawWheel();
+      document.getElementById('spotCountBadge').innerText = `${currentSpots.length} 個景點`;
+    }
+
+    function removeSpot(index) {
+      if (currentSpots.length <= 2) {
+        alert("至少保留 2 個景點才能轉動轉盤喔！");
+        return;
+      }
+      currentSpots.splice(index, 1);
+      renderTags();
+      drawWheel();
+      document.getElementById('spotCountBadge').innerText = `${currentSpots.length} 個景點`;
+    }
+
+    function renderTags() {
+      const container = document.getElementById('customTagsContainer');
+      container.innerHTML = "";
+      currentSpots.forEach((spot, idx) => {
+        const tag = document.createElement("span");
+        tag.className = "inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs";
+        tag.innerHTML = `<span>${spot.name}</span><button onclick="removeSpot(${idx})" class="text-slate-400 hover:text-red-500">×</button>`;
+        container.appendChild(tag);
+      });
+    }
+
+    /* ================= 2. 雙向匯率模組 ================= */
+    let currentRate = 0.205;
+
+    function updateRate() {
+      const r = parseFloat(document.getElementById('rateInput').value);
+      if (!isNaN(r) && r > 0) {
+        currentRate = r;
+        convertFromJPY();
+        renderExpenses();
+      }
+    }
+
+    function convertFromJPY() {
+      const jpy = parseFloat(document.getElementById('jpyInput').value);
+      const twdInput = document.getElementById('twdInput');
+      if (isNaN(jpy) || jpy === 0) {
+        twdInput.value = "";
+      } else {
+        twdInput.value = Math.round(jpy * currentRate);
+      }
+    }
+
+    function convertFromTWD() {
+      const twd = parseFloat(document.getElementById('twdInput').value);
+      const jpyInput = document.getElementById('jpyInput');
+      if (isNaN(twd) || twd === 0) {
+        jpyInput.value = "";
+      } else {
+        jpyInput.value = Math.round(twd / currentRate);
+      }
+    }
+
+    function quickSetJPY(val) {
+      document.getElementById('jpyInput').value = val;
+      convertFromJPY();
+    }
+
+    function fillExpenseFromConvert() {
+      const jpy = document.getElementById('jpyInput').value;
+      if (jpy) {
+        document.getElementById('expAmount').value = jpy;
+        document.getElementById('expName').focus();
+      }
+    }
+
+    /* ================= 3. 記帳模組 ================= */
+    let expenses = JSON.parse(localStorage.getItem('kansai_expenses') || '[]');
+
+    function saveExpenses() {
+      localStorage.setItem('kansai_expenses', JSON.stringify(expenses));
+    }
+
+    function addExpense(e) {
+      e.preventDefault();
+      const name = document.getElementById('expName').value.trim();
+      const cat = document.getElementById('expCategory').value;
+      const amount = parseFloat(document.getElementById('expAmount').value);
+
+      if (!name || isNaN(amount) || amount <= 0) return;
+
+      expenses.unshift({
+        id: Date.now(),
+        name: name,
+        category: cat,
+        jpy: amount,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      saveExpenses();
+      renderExpenses();
+
+      document.getElementById('expName').value = "";
+      document.getElementById('expAmount').value = "";
+    }
+
+    function deleteExpense(id) {
+      expenses = expenses.filter(item => item.id !== id);
+      saveExpenses();
+      renderExpenses();
+    }
+
+    function clearAllExpenses() {
+      if (expenses.length === 0) return;
+      if (confirm("確定要清空所有的記帳花費紀錄嗎？")) {
+        expenses = [];
+        saveExpenses();
+        renderExpenses();
+      }
+    }
+
+    function renderExpenses() {
+      const list = document.getElementById('expenseList');
+      const countLabel = document.getElementById('expenseCount');
+      const totalJPYEl = document.getElementById('totalJPY');
+      const totalTWDEl = document.getElementById('totalTWD');
+
+      list.innerHTML = "";
+      countLabel.innerText = `共 ${expenses.length} 筆`;
+
+      let totalJPY = 0;
+
+      if (expenses.length === 0) {
+        list.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">目前尚無花費紀錄，趕快記下第一筆開銷吧！</div>`;
+      } else {
+        expenses.forEach(item => {
+          totalJPY += item.jpy;
+          const twd = Math.round(item.jpy * currentRate);
+
+          const row = document.createElement('div');
+          row.className = "flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-xs hover:bg-slate-100/70 transition";
+          row.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px]">${item.category}</span>
+              <div>
+                <div class="font-bold text-slate-800">${item.name}</div>
+                <div class="text-[10px] text-slate-400">${item.time}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <div class="font-mono font-bold text-slate-800">¥${item.jpy.toLocaleString()}</div>
+                <div class="font-mono text-[10px] text-slate-400">NT$${twd.toLocaleString()}</div>
+              </div>
+              <button onclick="deleteExpense(${item.id})" class="text-slate-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+      }
+
+      totalJPYEl.innerText = `¥ ${totalJPY.toLocaleString()}`;
+      totalTWDEl.innerText = `NT$ ${Math.round(totalJPY * currentRate).toLocaleString()}`;
+    }
+
+    // 初始化載入
+    window.addEventListener('DOMContentLoaded', () => {
+      initSpots();
+      renderExpenses();
+    });
+  </script>
+</body>
+</html>
